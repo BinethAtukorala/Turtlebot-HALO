@@ -8,7 +8,7 @@ class HumanFollowerNode(Node):
     def __init__(self):
         super().__init__('human_follower_node')
 
-        # Subscriber to horizontal error from YOLO
+        # Subscribe to horizontal error
         self.subscription = self.create_subscription(
             Int32,
             '/human/error_x',

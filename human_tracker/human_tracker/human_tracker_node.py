@@ -32,7 +32,6 @@ class HumanTrackerNode(Node):
         return tuple(random.randint(0, 255) for _ in range(3))
 
     def image_callback(self, msg: CompressedImage):
-        # Convert compressed image to OpenCV format
         np_arr = np.frombuffer(msg.data, np.uint8)
         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         height, width, _ = frame.shape
@@ -74,7 +73,7 @@ class HumanTrackerNode(Node):
                                 (50, 50), cv2.FONT_HERSHEY_SIMPLEX,
                                 1.0, (0, 0, 255), 2)
 
-        # Publish horizontal error (only if a human detected)
+        # Publish horizontal error if a human is detected
         if horizontal_error is not None:
             msg_error = Int32()
             msg_error.data = horizontal_error
