@@ -1,4 +1,5 @@
 from setuptools import find_packages, setup
+import os, glob
 
 package_name = 'human_tracker'
 
@@ -10,6 +11,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'models'), ['models/yolo11n.pt'])
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,7 +26,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'human_tracker_node = human_tracker.human_tracker_node:main'
+            'human_tracker_node = human_tracker.human_tracker_node:main',
+            'human_follower_node = human_tracker.human_follower_node:main'
         ],
     },
 )
