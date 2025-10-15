@@ -8,6 +8,9 @@ import random
 from ultralytics import YOLO
 import numpy as np
 
+import os
+from ament_index_python.packages import get_package_share_directory
+
 class HumanTrackerNode(Node):
     def __init__(self):
         super().__init__('human_tracker_node')
@@ -21,10 +24,19 @@ class HumanTrackerNode(Node):
         )
 
         # Horizontal error publisher
-        self.error_publisher = self.create_publisher(Int32, '/human/error_x', 10)
+        self.error_publisher = self.create_publisher(
+            Int32, 
+            '/human_error_x', 
+            10
+        )
 
         self.bridge = CvBridge()
-        self.yolo = YOLO("yolov8s.pt")
+
+        pkg_share_dir = get_package_share_directory('human_tracker')
+        data_file = os.path.join(pkg_share_dir, 'models', 'yolo11n.pt')
+
+        self.yolo = YOLO(data_file)
+        self.yolo.classes = [0]
         self.get_logger().info("Human Tracker Node Started")
 
     def get_colours(self, cls_num):
