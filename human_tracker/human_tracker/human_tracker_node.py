@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Bool
 from cv_bridge import CvBridge
 import cv2
 import random
@@ -26,7 +26,14 @@ class HumanTrackerNode(Node):
         # Horizontal error publisher
         self.error_publisher = self.create_publisher(
             Int32, 
-            '/human_error_x', 
+            '/human/error_x', 
+            10
+        )
+
+        # Detection status publisher
+        self.detected_publisher = self.create_publisher(
+            Bool, 
+            '/human/detected', 
             10
         )
 
@@ -52,7 +59,7 @@ class HumanTrackerNode(Node):
         horizontal_error = None
 
         # Run YOLO tracking
-        results = self.yolo.track(frame, stream=True)
+        results = self.yolo.track(frame, stream=True, verbose=False)
 
         for result in results:
             class_names = result.names
@@ -87,10 +94,19 @@ class HumanTrackerNode(Node):
 
         # Publish horizontal error if a human is detected
         if horizontal_error is not None:
-            msg_error = Int32()
-            msg_error.data = horizontal_error
-            self.error_publisher.publish(msg_error)
-            self.get_logger().info(f"Published horizontal error: {horizontal_error}")
+            error_msg = Int32()
+            error_msg.data = horizontal_error
+            self.error_publisher.publish(error_msg)
+            
+            bool_msg = Bool()
+            bool_msg.data = True
+            self.detected_publisher.publish(bool_msg)
+            self.get_logger().info(f"Human detected. Error: {horizontal_error}")
+        else:
+            bool_msg = Bool()
+            bool_msg.data = False
+            self.detected_publisher.publish(bool_msg)
+            self.get_logger().info(f"Human not detected")
 
         # Show processed image
         cv2.imshow("Human Tracker", frame)
