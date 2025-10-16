@@ -33,7 +33,7 @@ class HumanTrackerNode(Node):
         self.bridge = CvBridge()
 
         pkg_share_dir = get_package_share_directory('human_tracker')
-        data_file = os.path.join(pkg_share_dir, 'models', 'yolo11n.pt')
+        data_file = os.path.join(pkg_share_dir, 'models', 'yolo11s.pt')
 
         self.yolo = YOLO(data_file)
         self.yolo.classes = [0]
