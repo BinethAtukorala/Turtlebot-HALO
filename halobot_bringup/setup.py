@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 import os, glob
 
-package_name = 'human_tracker'
+package_name = 'halobot_bringup'
 
 setup(
     name=package_name,
@@ -18,7 +18,7 @@ setup(
     maintainer='bineth',
     maintainer_email='bineth.mandiv@gmail.com',
     description='Human tracker node using YOLO',
-    license='TODO: License declaration',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',
@@ -26,8 +26,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'human_tracker_node = human_tracker.human_tracker_node:main',
-            'human_follower_node = human_tracker.human_follower_node:main'
+            f'tracker = {package_name}.tracker:main',
+            f'follower = {package_name}.follower:main',
+            f'range_finder = {package_name}.range_finder:main'
         ],
     },
 )

@@ -1,39 +1,51 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import CompressedImage, LaserScan
 from std_msgs.msg import Int32
 from geometry_msgs.msg import Twist
-from cv_bridge import CvBridge
+
+from halobot_msgs.srv import PidParam
+
 import cv2
-import random
+from cv_bridge import CvBridge
 from ultralytics import YOLO
 import numpy as np
-from time import sleep
-from rclpy.duration import Duration
 
+from time import sleep
+import random
+import sys
 import threading
 
 class HumanFollowerNode(Node):
     def __init__(self):
         super().__init__('human_follower_node')
 
-        self.max_linear_speed = 1
-        self.max_angular_speed = 1.5
+        # Parameterse read
+        self.declare_parameter('max_linear_speed', 1)
+        self.declare_parameter('max_angular_speed', 1.5)
+        self.declare_parameter('kP', 0.3)
+        self.declare_parameter('kD', 0.0)
+        self.declare_parameter('kI', 0.0)
+        self.declare_parameter('kAng', 0.1)
 
-        self.kP = 0.03
-        self.kD = 0.0
-        self.kI = 0.0
-        self.kAng = 0.1
+        # Load params
+
+        self.max_linear_speed = float(self.get_parameter('max_linear_speed').value)
+        self.max_angular_speed = float(self.get_parameter('max_angular_speed').value)
+
+        self.kP = float(self.get_parameter('kP').value)
+        self.kD = float(self.get_parameter('kD').value)
+        self.kI = float(self.get_parameter('kI').value)
+        self.kAng = float(self.get_parameter('kAng').value)
+
+        # Local variables for PID
 
         self.previous_time = None
         self.previous_error = 0
         self.cumulative_error = 0
 
-        self.laser_scan = None
-        self.scan_lock = threading.Lock()
-    
+        ## Subscribers    
 
-        # Subscribe to horizontal error
+        # Horizontal error
         self.error_subscription = self.create_subscription(
             Int32,
             '/human/error_x', # Compressed images to save bandwith
@@ -41,13 +53,7 @@ class HumanFollowerNode(Node):
             10
         )   
 
-        # Subscribe to lidar scan
-        self.lidar_subscription = self.create_subscription(
-            LaserScan,
-            '/scan', 
-            self.scan_callback,
-            5
-        )
+        ## Publishers
 
         # cmd_vel publisher
         self.cmdvel_publisher = self.create_publisher(
@@ -56,41 +62,26 @@ class HumanFollowerNode(Node):
             10
         )
 
+        ## Services
+
+        # PID params updater
+        self.pid_service = self.create_service(
+            PidParam, 
+            '/pid', 
+            self.pid_callback
+        )
+
         self.get_logger().info("Human Follower Node Started")
 
 
 
     def error_callback(self, msg: Int32):
+        # Skip first error reading to get an accurate time delta 
         if type(self.previous_time) == type(None):
             self.previous_time = self.get_clock().now()
             pass
 
-
         error = msg.data
-
-        # if(abs(error) > 10):
-
-        #     vel = Twist()
-
-        #     vel.angular.z = -0.75 * error/256
-        #     vel.linear.x = 0.0
-
-        #     self.cmdvel_publisher.publish(vel)
-        
-        # else:
-        #     scan = None
-        #     with self.scan_lock:
-        #         scan = self.laser_scan
-            
-        #     print(scan)
-
-        #     vel = Twist()
-
-        #     vel.linear.x = 0.15
-        #     vel.angular.z = 0.0
-
-            
-        #     self.cmdvel_publisher.publish(vel)
 
         vel = Twist()
 
@@ -98,24 +89,44 @@ class HumanFollowerNode(Node):
 
         delta_time = (now_time - self.previous_time).nanoseconds / pow(10, 6)
 
+        # PID Control
         self.cumulative_error += error * delta_time
         rate_error = (error - self.previous_error)/delta_time
 
         output = (self.kP * error) + (self.kI * self.cumulative_error) + (self.kD * rate_error)
         
-        vel.angular.z = float(max(min(-self.kAng * output, self.max_angular_speed), -self.max_angular_speed))
-        vel.linear.x = float(self.max_linear_speed * (1 - min(abs(output) / 100, 1)))
+        
+        vel.angular.z = float(np.clip(
+            -self.kAng * output, 
+            -self.max_angular_speed, self.max_angular_speed
+            ))
+        
+        # The higher abs(output) is, steering should decrease
+        vel.linear.x = float(np.clip(
+            self.max_linear_speed * (1 - min(abs(output)/100, 1))
+            ))
 
         self.previous_error = error
         self.previous_time = now_time
         self.cmdvel_publisher.publish(vel)
         self.get_logger().info(f"Output: {output} Lin: {vel.linear.x} Ang: {vel.angular.z}")
 
-        
+    def pid_callback(self, request, response):
+        self.kP += request.kp_i
+        self.kI += request.ki_i
+        self.kD += request.kd_i
+        self.kAng += request.kang_i
 
-    def scan_callback(self, msg: LaserScan):
-        with self.scan_lock:
-            self.laser_scan = msg
+        response.kp = self.kP
+        response.ki = self.kI
+        response.kd = self.kD
+        response.kang = self.kAng
+
+        self.get_logger().info(f"Updated PID: {self.kP} {self.kD} {self.kI} : {self.kAng}")
+
+        return response
+        
+        
 
 
 def main(args=None):
