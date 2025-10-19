@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, Image
 from std_msgs.msg import Int32, Bool
 from cv_bridge import CvBridge
 import cv2
@@ -17,8 +17,8 @@ class HumanTrackerNode(Node):
 
         # Subscribe to camera images
         self.subscription = self.create_subscription(
-            CompressedImage,
-            '/image_raw/compressed', # Compressed images to save bandwith
+            Image,
+            '/camera/image_raw', # Compressed images to save bandwith
             self.image_callback,
             10
         )
@@ -39,7 +39,7 @@ class HumanTrackerNode(Node):
 
         self.bridge = CvBridge()
 
-        pkg_share_dir = get_package_share_directory('human_tracker')
+        pkg_share_dir = get_package_share_directory('halobot_bringup')
         data_file = os.path.join(pkg_share_dir, 'models', 'yolo11s.pt')
 
         self.yolo = YOLO(data_file)
@@ -50,9 +50,16 @@ class HumanTrackerNode(Node):
         random.seed(cls_num)
         return tuple(random.randint(0, 255) for _ in range(3))
 
-    def image_callback(self, msg: CompressedImage):
+    def image_callback(self, msg):
         np_arr = np.frombuffer(msg.data, np.uint8)
-        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        frame = None
+
+        if(type(msg) == CompressedImage):
+            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        elif(type(msg) == Image):
+            frame = np_arr.reshape((msg.height, msg.width, 3)) 
+        
         height, width, _ = frame.shape
         frame_center_x = width // 2
 

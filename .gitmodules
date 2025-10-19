@@ -1,0 +1,16 @@
+[submodule "turtlebot3_simulations"]
+	path = turtlebot3_simulations
+	url = git@github.com:ROBOTIS-GIT/turtlebot3_simulations.git
+	branch = humble
+[submodule "DynamixelSDK"]
+	path = DynamixelSDK
+	url = git@github.com:ROBOTIS-GIT/DynamixelSDK.git
+	branch = humble
+[submodule "turtlebot3_msgs"]
+	path = turtlebot3_msgs
+	url = git@github.com:ROBOTIS-GIT/turtlebot3_msgs.git
+	branch = humble
+[submodule "turtlebot3"]
+	path = turtlebot3
+	url = git@github.com:ROBOTIS-GIT/turtlebot3.git
+	branch = humble

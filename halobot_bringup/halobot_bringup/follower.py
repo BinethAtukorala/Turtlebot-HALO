@@ -103,7 +103,9 @@ class HumanFollowerNode(Node):
         
         # The higher abs(output) is, steering should decrease
         vel.linear.x = float(np.clip(
-            self.max_linear_speed * (1 - min(abs(output)/100, 1))
+            self.max_linear_speed * (1 - min(abs(output)/100, 1)),
+            0,
+            self.max_linear_speed
             ))
 
         self.previous_error = error
