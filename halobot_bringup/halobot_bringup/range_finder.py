@@ -8,7 +8,8 @@ import time
 
 class HumanRangeFinder(Node):
     def __init__(self):
-        super().__init__('human_range_finder')
+        
+
         self.laser_scan = None
         # Subscribe to horizontal error
         self.subscription = self.create_subscription(
@@ -28,7 +29,7 @@ class HumanRangeFinder(Node):
 
         self.scan_subscription = self.create_subscription(
             LaserScan,
-            '/scan', # Compressed images to save bandwith
+            '/scan', 
             self.laserscan_callback,
             qos_profile
         )

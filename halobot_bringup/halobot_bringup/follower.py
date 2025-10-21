@@ -20,12 +20,12 @@ class HumanFollowerNode(Node):
         super().__init__('human_follower_node')
 
         # Parameterse read
-        self.declare_parameter('max_linear_speed', 1)
+        self.declare_parameter('max_linear_speed', 0.75)
         self.declare_parameter('max_angular_speed', 1.5)
         self.declare_parameter('kP', 0.3)
         self.declare_parameter('kD', 0.0)
         self.declare_parameter('kI', 0.0)
-        self.declare_parameter('kAng', 0.1)
+        self.declare_parameter('kAng', 0.01)
 
         # Load params
 

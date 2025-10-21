@@ -15,10 +15,16 @@ class HumanTrackerNode(Node):
     def __init__(self):
         super().__init__('human_tracker_node')
 
+        super().__init__('human_range_finder')
+
+        self.declare_parameter('sim', False)
+
+        self.sim = self.get_parameter('sim').value
+
         # Subscribe to camera images
         self.subscription = self.create_subscription(
-            Image,
-            '/camera/image_raw', # Compressed images to save bandwith
+            Image if self.sim else CompressedImage,
+            '/camera/image_raw' if self.sim else '/image_raw/compressed', # Compressed images to save bandwith
             self.image_callback,
             10
         )
