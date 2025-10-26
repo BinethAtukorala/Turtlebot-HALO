@@ -92,9 +92,18 @@ ros2 param set /follower max_linear_speed 0.5
 
 | Name                | Type   | Default       | Description                 | Node |
 | ------------------- | ------ | ------------- | --------------------------- | ---- |
-| `target_distance_m` | double | `2.0`         | Desired follow distance     |
-| `max_linear_speed`  | double | `0.6`         | m/s clamp                   |
-| `qos_reliability`   | string | `best_effort` | `reliable` or `best_effort` |
+| `sim` | boolean | `False`         | Use simulation topics     | Tracker |
+| `img_width`  | integer | `600`         | Image width for sectors                   | Range Finder |
+| `no_of_sectors`   | integer | `5` | Number of sectors to split the image | Range Finder |
+| `front_arc`   | integer | `90` | Arc in front to scan with Lidar (deg) | Range Finder |
+| `max_linear_speed`   | double | `0.5` | Maximum linear speed during following | Follower |
+| `max_angular_speed`   | double | `0.5` | Maximum angular speed during following | Follower |
+| `kP`   | double | `0.4` | Proportional constant of PID controller | Follower |
+| `kI`   | double | `0.0` | Integral constant of PID controller | Follower |
+| `kD`   | double | `0.0` | Derivative constant of PID tucontrollerner | Follower |
+| `kAng`   | double | `0.02` | Angular constant of PID controller | Follower |
+| `stopping_distance`   | double | `0.3` | Distance from target to stop movement | Follower |
+
 
 
 ## ROS Interfaces (Topics/Services/Actions)
@@ -104,7 +113,11 @@ ros2 param set /follower max_linear_speed 0.5
 | Topic            | Type                        | QoS            | Notes                  |
 | ---------------- | --------------------------- | -------------- | ---------------------- |
 | `/scan`          | `sensor_msgs/msg/LaserScan` | SensorData QoS | Required               |
-| `/human/error_x` | `std_msgs/msg/Float32`      | Default        | Horizontal pixel error |
+| `/image_raw/compressed` | `sensor_msgs/msg/Image` | Default | Compressed image from camera |
+| `/human/error_x` | `std_msgs/msg/Int32MultiArray`      | Default        | Horizontal pixel error array |
+| `/human/cover` | `std_msgs/msg/Int32`      | Default        | Percentage of screen covered by target |
+| `/human/at_target` | `std_msgs/msg/Int32 | Default | Error from center to selected target from array |
+
 
 
 ### Topics (Publish)
@@ -112,17 +125,20 @@ ros2 param set /follower max_linear_speed 0.5
 | Topic             | Type                      | QoS     | Notes                  |
 | ----------------- | ------------------------- | ------- | ---------------------- |
 | `/cmd_vel`        | `geometry_msgs/msg/Twist` | Default | Robot velocity command |
-| `/human/distance` | `std_msgs/msg/Int32`      | Default | Estimated range (cm)   |
+| `/human/error_x` | `std_msgs/msg/Int32MultiArray` | Horizontal pixel error array |
+| `/human/cover` | `std_msgs/msg/Int32`      | Default        | Percentage of screen covered by target |
+| `/human/at_target` | `std_msgs/msg/Int32 | Default | Error from center to selected target from array |
+| `/human/closest_distance` | `std_msgs/msg/Float32 | Default | Distance to closest human |
 
 
 ### Services / Actions
 
 | Service             | Type                        | Notes                  |
 | ------------------- | --------------------------- | ---------------------- |
-| '/pid'              | `halobot_msgs/msg/PidTuner` | Update kP, kI, kD, kAng values for PID Tuning |
+| `/pid`              | `halobot_msgs/msg/PidParam` | Update kP, kI, kD, kAng values for PID Tuning |
 
 ## Open Source Software Used
 
-- [Turtlebot3]()
-- [Ultralytics YOLO]()
-- [Actor physics collision]()
+- [Turtlebot3](https://github.com/ROBOTIS-GIT/turtlebot3)
+- [Ultralytics YOLO](https://github.com/ultralytics/ultralytics)
+- [Actor physics collision](https://github.com/JiangweiNEU/actor_collisions)
