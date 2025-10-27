@@ -23,7 +23,7 @@ Installation and usage instructions for HALO bot.
 
 #### Turtlebot
 
-Official installation guide for setting up Turtlebot3 Waffle Pi and remote PC for communicating with the Turtlebot can be found in the [E-Manual](https://emanual.robotis.com/docs/en/platform/turtlebot3/quick-start/) provided by ROBOTIS.
+- Official installation guide for setting up Turtlebot3 Waffle Pi and remote PC for communicating with the Turtlebot can be found in the [E-Manual](https://emanual.robotis.com/docs/en/platform/turtlebot3/quick-start/) provided by ROBOTIS.
 
 #### HALO
 
