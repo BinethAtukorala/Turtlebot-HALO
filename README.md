@@ -15,19 +15,17 @@ Installation and usage instructions for HALO bot.
 
 ### Install
 
-<details open>
-<summary><b>ROS2</b></summary>
-Please follow official installation instructions for ROS2 Humble Hawksbill. [Instructions](https://docs.ros.org/en/humble/Installation.html)
-</details>
+
+#### ROS 2
+- Please follow official installation instructions for ROS2 Humble Hawksbill. [Instructions](https://docs.ros.org/en/humble/Installation.html)
 
 
-<details open>
-<summary><b>Turtlebot</b></summary>
+
+#### Turtlebot
+
 Official installation guide for setting up Turtlebot3 Waffle Pi and remote PC for communicating with the Turtlebot can be found in the [E-Manual](https://emanual.robotis.com/docs/en/platform/turtlebot3/quick-start/) provided by ROBOTIS.
-</details>
 
-<details open>
-<summary><b>HALO</b></summary>
+#### HALO
 
 1. Create a workspace and clone repository.
 
@@ -42,8 +40,6 @@ cd ~/turtlebot_ws/
 colcon build --symlink-install
 source install/setup.bash
 ```
-
-</details>
 
 ### Usage
 
@@ -94,49 +90,11 @@ ros2 param set /follower max_linear_speed 0.5
 
 ## ROS Nodes and Parameters
 
-### Tracker
-
-Identifies humans using the camera feed and outputs the error from the center.
-<details open>
-<summary>Parameters</summary>
-
-| Name                | Type   | Default       | Description                 |
-| ------------------- | ------ | ------------- | --------------------------- |
+| Name                | Type   | Default       | Description                 | Node |
+| ------------------- | ------ | ------------- | --------------------------- | ---- |
 | `target_distance_m` | double | `2.0`         | Desired follow distance     |
 | `max_linear_speed`  | double | `0.6`         | m/s clamp                   |
 | `qos_reliability`   | string | `best_effort` | `reliable` or `best_effort` |
-
-</details>
-
-### Range Finder
-
-Select closest human and report the distance.
-
-<details open>
-<summary>Parameters</summary>
-
-| Name                | Type   | Default       | Description                 |
-| ------------------- | ------ | ------------- | --------------------------- |
-| `target_distance_m` | double | `2.0`         | Desired follow distance     |
-| `max_linear_speed`  | double | `0.6`         | m/s clamp                   |
-| `qos_reliability`   | string | `best_effort` | `reliable` or `best_effort` |
-
-</details>
-
-### Follower
-
-Move robot towards human using a PID controller.
-
-<details open>
-<summary>Parameters</summary>
-
-| Name                | Type   | Default       | Description                 |
-| ------------------- | ------ | ------------- | --------------------------- |
-| `target_distance_m` | double | `2.0`         | Desired follow distance     |
-| `max_linear_speed`  | double | `0.6`         | m/s clamp                   |
-| `qos_reliability`   | string | `best_effort` | `reliable` or `best_effort` |
-
-</details>
 
 
 ## ROS Interfaces (Topics/Services/Actions)
