@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Float32
 from geometry_msgs.msg import Twist
 
 from halobot_msgs.srv import PidParam
@@ -11,21 +11,22 @@ from ultralytics import YOLO
 import numpy as np
 
 from time import sleep
-import random
+import random, math
 import sys
-import threading
+from threading import Lock
 
 class HumanFollowerNode(Node):
     def __init__(self):
         super().__init__('human_follower_node')
 
         # Parameterse read
-        self.declare_parameter('max_linear_speed', 0.75)
-        self.declare_parameter('max_angular_speed', 1.5)
-        self.declare_parameter('kP', 0.3)
+        self.declare_parameter('max_linear_speed', 0.5)
+        self.declare_parameter('max_angular_speed', 0.5)
+        self.declare_parameter('kP', 0.4)
         self.declare_parameter('kD', 0.0)
         self.declare_parameter('kI', 0.0)
-        self.declare_parameter('kAng', 0.01)
+        self.declare_parameter('kAng', 0.02)
+        self.declare_parameter('stopping_distance', 0.30)
 
         # Load params
 
@@ -36,6 +37,7 @@ class HumanFollowerNode(Node):
         self.kD = float(self.get_parameter('kD').value)
         self.kI = float(self.get_parameter('kI').value)
         self.kAng = float(self.get_parameter('kAng').value)
+        self.stopping_distance = float(self.get_parameter('stopping_distance').value)
 
         # Local variables for PID
 
@@ -48,10 +50,32 @@ class HumanFollowerNode(Node):
         # Horizontal error
         self.error_subscription = self.create_subscription(
             Int32,
-            '/human/error_x', # Compressed images to save bandwith
+            '/human/at_target', # Compressed images to save bandwith
             self.error_callback,
             10
         )   
+
+        # Distance
+
+        self.distance = math.inf
+        self.distance_lock = Lock()
+
+        self.distance_subscription = self.create_subscription(
+            Float32, 
+            '/human/closest_distance',
+            self.distance_callback,
+            10
+        )
+
+        # Image cover
+        self.cover = 0
+        self.cover_lock = Lock()
+        self.cover_subscription = self.create_subscription(
+            Int32,
+            '/human/cover',
+            self.cover_callback,
+            10
+        )
 
         ## Publishers
 
@@ -83,37 +107,81 @@ class HumanFollowerNode(Node):
 
         error = msg.data
 
-        vel = Twist()
+        distance = 0
+        # Get distance value
+        with self.distance_lock:
+            distance = self.distance
+        
 
+        # Get cover value
+        with self.cover_lock:
+            cover = self.cover
+            
         now_time = self.get_clock().now()
 
-        delta_time = (now_time - self.previous_time).nanoseconds / pow(10, 6)
+        vel = Twist()
 
-        # PID Control
-        self.cumulative_error += error * delta_time
-        rate_error = (error - self.previous_error)/delta_time
+        # Checking whether human is found
+        if(error < 2000):
+            if(not(distance > self.stopping_distance and cover > 80)):
 
-        output = (self.kP * error) + (self.kI * self.cumulative_error) + (self.kD * rate_error)
-        
-        
-        vel.angular.z = float(np.clip(
-            -self.kAng * output, 
-            -self.max_angular_speed, self.max_angular_speed
-            ))
-        
-        # The higher abs(output) is, steering should decrease
-        vel.linear.x = float(np.clip(
-            self.max_linear_speed * (1 - min(abs(output)/100, 1)),
-            0,
-            self.max_linear_speed
-            ))
 
+                delta_time = (now_time - self.previous_time).nanoseconds / pow(10, 6)
+
+                # PID Control
+                self.cumulative_error += error * delta_time     # I term
+                rate_error = (error - self.previous_error)/delta_time   # D term
+
+                # Control calculation
+                output = (self.kP * error) + (self.kI * self.cumulative_error) + (self.kD * rate_error)
+                
+                # Angular speed
+                vel.angular.z = float(np.clip(
+                    -self.kAng * output, 
+                    -self.max_angular_speed, self.max_angular_speed
+                    ))
+                
+                # Linear speed
+                # The higher abs(output) is, steering should decrease
+                vel.linear.x = float(np.clip(
+                    self.max_linear_speed * (1 - min(abs(output)/100, 1)),
+                    0,
+                    self.max_linear_speed
+                    ))
+            else:
+                # Angular speed
+                vel.angular.z = 0.0
+                
+                # Linear speed
+                vel.linear.x = 0.0
+
+                output = "Stopping!"
+        else:
+            output = "Searching for human"
+            vel.angular.z = (self.max_angular_speed) * (-1 if self.previous_error > 0 else 1)
+
+        # Update previous values
         self.previous_error = error
         self.previous_time = now_time
+
+        # Publish to /cmd_velSS
         self.cmdvel_publisher.publish(vel)
         self.get_logger().info(f"Output: {output} Lin: {vel.linear.x} Ang: {vel.angular.z}")
 
+
+    # Update distance values
+    def distance_callback(self, msg: Float32):
+        with self.distance_lock:
+            self.distance = msg.data
+
+    # Cover callback
+    def cover_callback(self, msg: Int32):
+        with self.cover_lock:
+            self.cover = msg.data
+
+    # Helper service for updating PID Values
     def pid_callback(self, request, response):
+
         self.kP += request.kp_i
         self.kI += request.ki_i
         self.kD += request.kd_i

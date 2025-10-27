@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage, Image
-from std_msgs.msg import Int32, Bool
+from std_msgs.msg import Int32, Bool, Int32MultiArray
 from cv_bridge import CvBridge
 import cv2
 import random
@@ -15,7 +15,6 @@ class HumanTrackerNode(Node):
     def __init__(self):
         super().__init__('human_tracker_node')
 
-        super().__init__('human_range_finder')
 
         self.declare_parameter('sim', False)
 
@@ -31,15 +30,14 @@ class HumanTrackerNode(Node):
 
         # Horizontal error publisher
         self.error_publisher = self.create_publisher(
-            Int32, 
+            Int32MultiArray, 
             '/human/error_x', 
             10
         )
 
-        # Detection status publisher
-        self.detected_publisher = self.create_publisher(
-            Bool, 
-            '/human/detected', 
+        self.cover_percentage_publisher = self.create_publisher(
+            Int32,
+            '/human/cover',
             10
         )
 
@@ -69,7 +67,8 @@ class HumanTrackerNode(Node):
         height, width, _ = frame.shape
         frame_center_x = width // 2
 
-        horizontal_error = None
+        horizontal_error = []
+        cover_percentage = 0
 
         # Run YOLO tracking
         results = self.yolo.track(frame, stream=True, verbose=False)
@@ -95,10 +94,18 @@ class HumanTrackerNode(Node):
                                 (x1, max(y1 - 10, 20)),
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 0.6, colour, 2)
+                    
+                    width_t = x2 - x1
+                    height_t = y2 - y1
+                    area_t = width_t * height_t
 
                     # Compute horizontal error (from center)
                     human_center_x = (x1 + x2) // 2
-                    horizontal_error = human_center_x - frame_center_x
+                    horizontal_error.append(human_center_x - frame_center_x)
+                    temp_percentage = int(area_t/(width*height) * 100)
+
+                    if temp_percentage > cover_percentage:
+                        cover_percentage = temp_percentage
 
                     # Display error on image
                     cv2.putText(frame, f"Error X: {horizontal_error}",
@@ -106,20 +113,20 @@ class HumanTrackerNode(Node):
                                 1.0, (0, 0, 255), 2)
 
         # Publish horizontal error if a human is detected
-        if horizontal_error is not None:
-            error_msg = Int32()
+        if len(horizontal_error) > 0:
+            error_msg = Int32MultiArray()
             error_msg.data = horizontal_error
             self.error_publisher.publish(error_msg)
             
-            bool_msg = Bool()
-            bool_msg.data = True
-            self.detected_publisher.publish(bool_msg)
-            self.get_logger().info(f"Human detected. Error: {horizontal_error}")
+
         else:
-            bool_msg = Bool()
-            bool_msg.data = False
-            self.detected_publisher.publish(bool_msg)
-            self.get_logger().info(f"Human not detected")
+            error_msg = Int32MultiArray()
+            self.error_publisher.publish(error_msg)
+
+        cover_msg = Int32()
+        cover_msg.data = cover_percentage
+        self.cover_percentage_publisher.publish(cover_msg)
+
 
         # Show processed image
         cv2.imshow("Human Tracker", frame)
